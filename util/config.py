@@ -1,13 +1,13 @@
 import string
 from dataset import VoiceDataset, FaceDataset
-from network import VoiceEmbedNet, Generator, Condititon_D, FaceEmbedNet, Classifier
+from network import VoiceEmbedNet, Generator, FaceEmbedNet, Classifier
 from utils import get_collate_fn
 voice_features_len = 64
 DATASET_PARAMETERS = {
     # RAVDESS datase csv
     # 'wave_file': 'datasets/RAVDESS/mfcc_list.csv',
     # 'image_file': 'datasets/RAVDESS/image_list.csv',
-    'wave_image_file': 'datasets/RAVDESS/fbank_image_list.csv',
+    'wave_image_file': 'datasets/RAVDESS/mfcc_image_list.csv',
 
     # log model
     'log_dir': 'models/log',
@@ -35,7 +35,7 @@ NETWORKS_PARAMETERS = {
         'input_channel': 64,
         'channels': [256, 384, 576, 864],
         'output_channel': 24, # the number of peoples
-        'model_path': "./pretrained_models/12-13,22,10-2000-Fbank-cnn-64dim.pth",
+        'model_path': "./pretrained_models/12-12,12,12-2000-MFCC-cnn-64dim.pth",
         'save_model_path': 'models/voice_embedding/voice_embedding',
 
     },
@@ -48,15 +48,6 @@ NETWORKS_PARAMETERS = {
 
         'model_path': 'models/generator/07-23,05,56-200000-generator.pth',     # 预训练模型存储路径以及名称
         'save_model_path': 'models/generator/generator',
-    },
-    # DISCRIMINATOR (d)
-    'd1-condition': {
-        'network': Condititon_D,  # Discrminator ='F'+'C' is a special Classifier with 1 subject
-        'input_channel': [3, 8],       # embedding feature and label class
-        'channels': [32, 64, 128, 256, 512, 1024, 64],
-        'output_channel': 1,
-        'model_path': 'models/discriminator.pth',  # 无
-        'save_model_path': 'models/discriminator/discriminator',
     },
 
     # FACE EMBEDDING NETWORK (f)

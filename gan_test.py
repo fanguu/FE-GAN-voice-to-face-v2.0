@@ -56,13 +56,13 @@ def feautre2face(e_net, g_net, voice_feat_pth, GPU=True):
         voice_EM_label_G= voice_EM_label_G.cuda()
     embedding = e_net(voice_feat)
     embedding = F.normalize(embedding)
-    embedding = embedding.squeeze(2).squeeze(2)    #  压缩维度从64,128,1,1 --> 64,128
+    embedding = embedding    #  压缩维度从64,128,1,1 --> 64,128
     face = g_net(embedding)     # G条件输入
     return face
 
 
 if __name__ == '__main__':
-    generator_folder_pth = "/home/fz/3PythonProject/FE-GAN-voice-to-face-v2.0/models/generator"
+    generator_folder_pth = "./models/generator"
     generator_list = []
     for root, dirs, filenames in os.walk(generator_folder_pth):
         filenames.sort()
@@ -70,7 +70,7 @@ if __name__ == '__main__':
             filename = os.path.join(generator_folder_pth,filename)
             generator_list.append(filename)
 
-    for generator_file_pth in generator_list[141:]:
+    for generator_file_pth in generator_list[187:]:
         voice_list, face_list, id_class_num, emotion_class_num = csv_to_list(DATASET_PARAMETERS)
         NETWORKS_PARAMETERS['e']['output_channel'] = id_class_num
         NETWORKS_PARAMETERS['g']['input_channel'][1] = emotion_class_num
