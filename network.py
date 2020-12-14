@@ -92,46 +92,6 @@ class Generator(nn.Module):    # 'channels': [1024, 512, 256, 128, 64, 32]
         return x_
 
 # face embedding network and classify with condition discriminator
-class Condititon_D(nn.Module):
-    def __init__(self, input_channel, channels, output_channel):
-        super(Condititon_D, self).__init__()
-
-        self.label_emb = nn.Embedding(input_channel[1], input_channel[1])
-
-        def make_conv_layer(in_channels, out_channels, kernel_size, stride, padding, bn=True, pool=False):
-            layers = [
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=True),
-                ]
-            if bn:
-                layers.append(nn.BatchNorm2d(out_channels))
-                layers.append(nn.ReLU(inplace=True))
-                # layers.append(nn.Dropout2d(0.25))
-            if pool:
-                layers.append(nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=False))
-            return layers
-
-        # DISCRIMINATOR [32, 64, 128, 256, 512, 512, 64],
-        self.model = nn.Sequential(
-            *make_conv_layer(input_channel[0]+0, channels[0], kernel_size=1, stride=1, padding=1),   # 返回tuple
-            *make_conv_layer(channels[0], channels[1],  4, 2, 1),
-            *make_conv_layer(channels[1], channels[2],  4, 2, 1),
-            *make_conv_layer(channels[2], channels[3],  4, 2, 1),
-            *make_conv_layer(channels[3], channels[4],  4, 2, 1),
-            *make_conv_layer(channels[4], channels[5], 4, 2, 1),
-            nn.Conv2d(channels[5], channels[6], 4, 2, 0, bias=True),
-        )
-        # self.fc = nn.Sequential(
-        #     # nn.Linear(channels[6], 1024),
-        #     # nn.BatchNorm1d(1024),
-        #     # nn.LeakyReLU(0.2),
-        #     nn.Linear(channels[6], output_channel, bias=False))
-
-    def forward(self, x, emotion_labels):
-        # x = torch.cat((emotion_labels, x), 1)
-        x = self.model(x)
-        # x = x.view(x.size()[0], -1)
-        # x = self.fc(x)
-        return x
 
 class FaceEmbedNet(nn.Module):
     def __init__(self, input_channel, channels, output_channel):
