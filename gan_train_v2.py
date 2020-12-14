@@ -39,7 +39,7 @@ NETWORKS_PARAMETERS['e']['output_channel'] = id_class_num
 e_net, e_optimizer = get_network('e', NETWORKS_PARAMETERS, test=True)   # 部分训练
 NETWORKS_PARAMETERS['g']['input_channel'][1] = emotion_class_num
 g_net, g_optimizer = get_network('g', NETWORKS_PARAMETERS, train=True)
-# NETWORKS_PARAMETERS['d1-condition']['input_channel'][1] = emotion_class_num
+NETWORKS_PARAMETERS['d1-condition']['input_channel'][1] = emotion_class_num
 d1_net, d1_optimizer = get_network('d0', NETWORKS_PARAMETERS, train=True)
 d2_net, d2_optimizer = get_network('d0', NETWORKS_PARAMETERS, train=True)
 f1_net, f1_optimizer = get_network('f', NETWORKS_PARAMETERS, train=True)
@@ -113,7 +113,7 @@ for it in range(600000+1):
     voice_EM_label_ = voice_EM_label_.unsqueeze(2).unsqueeze(3).expand(DATASET_PARAMETERS['batch_size'], emotion_class_num, face.size(2), face.size(3))
     voice_EM_label_ = voice_EM_label_.cuda()
 
-    fake_face = g_net(embeddings.unsqueeze(2).unsqueeze(3))     # G条件输入
+    fake_face = g_net(embeddings)     # G条件输入
 
     """ --------------------update Discriminators and classifers-------------------------- """
     f1_optimizer.zero_grad()
@@ -125,20 +125,20 @@ for it in range(600000+1):
 
     # ------- 真实样本score------- #
     real_score_out_1 = d1_net(f1_net(face))           # D1无条件输入
-    real_score_out_2 = d2_net(f2_net(face))            # D2无条件输入
+    real_score_out_2 = d1_net(f2_net(face))            # D1无条件输入
     D1_real_loss= F.binary_cross_entropy(torch.sigmoid(real_score_out_1), real_label) # BCE loss
     D2_real_loss = F.binary_cross_entropy(torch.sigmoid(real_score_out_2), real_label)  # BCE loss
-    D_real_loss = 1*D1_real_loss+0*D2_real_loss
+    D_real_loss = 0.3*D1_real_loss+0.7*D2_real_loss
 
     # ------- 生成样本score------- #
     fake_score_out_1 = d1_net(f1_net(fake_face.detach()))     # D1无条件输入
-    fake_score_out_2 = d2_net(f2_net(fake_face.detach()))     # D2无条件输入
+    fake_score_out_2 = d1_net(f2_net(fake_face.detach()))     # D1无条件输入
     D1_fake_loss = F.binary_cross_entropy(torch.sigmoid(fake_score_out_1), fake_label)
     D2_fake_loss = F.binary_cross_entropy(torch.sigmoid(fake_score_out_2), fake_label)
-    D_fake_loss = 1*D1_fake_loss+0*D2_fake_loss
+    D_fake_loss = 0.3*D1_fake_loss+0.7*D2_fake_loss
 
     real_id_label_out = c1_net(f1_net(face))             # 计算 c1,c2 loss
-    real_emotion_label_out = c2_net(f2_net(face))        # 计算 c1,c2 loss
+    real_emotion_label_out = c2_net(f2_net(face))  # 计算 c1,c2 loss
     C1_real_loss = F.nll_loss(F.log_softmax(real_id_label_out, dim=1), face_identity_label)
     C2_real_loss = F.nll_loss(F.log_softmax(real_emotion_label_out, dim=1), face_emotion_label)
 
@@ -167,7 +167,7 @@ for it in range(600000+1):
 
     GD_fake_loss1 = F.binary_cross_entropy(torch.sigmoid(fake_score_out_1), real_label)
     GD_fake_loss2 = F.binary_cross_entropy(torch.sigmoid(fake_score_out_2), real_label)
-    GD_fake_loss = 1*GD_fake_loss1 +0*GD_fake_loss2
+    GD_fake_loss = 0.3*GD_fake_loss1 +0.7*GD_fake_loss2
 
     GC1_fake_loss = F.nll_loss(F.log_softmax(fake_id_label_out, dim=1), voice_identity_label)    # 用真实标签替代随机标签？
     GC2_fake_loss = F.nll_loss(F.log_softmax(fake_emotion_label_out, dim=1), voice_emotion_label)

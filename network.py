@@ -12,7 +12,7 @@ class VoiceEmbedNet(nn.Module):       # 'channels': [256, 384, 576, 864]
         super(VoiceEmbedNet, self).__init__()
         # 第一层卷积输入特征尺寸： mfcc = 13, fbank = 64, spectrogram = 128
         self.model = nn.Sequential(
-            nn.Conv1d(13, 256, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.Conv1d(64, 256, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm1d(256, affine=True),
             nn.ReLU(inplace=True),
             nn.Conv1d(256, 384, 3, 2, 1, bias=False),
@@ -44,6 +44,7 @@ class VoiceEmbedNet(nn.Module):       # 'channels': [256, 384, 576, 864]
         return x
 
 
+
 class Generator(nn.Module):    # 'channels': [1024, 512, 256, 128, 64, 32]
     def __init__(self, input_channel, channels, output_channel, use_attention=0):
         super(Generator, self).__init__()
@@ -58,13 +59,13 @@ class Generator(nn.Module):    # 'channels': [1024, 512, 256, 128, 64, 32]
             nn.BatchNorm1d(128, affine=True),
             nn.ReLU(inplace=True),
         )
-        def make_dconv_layer(in_channels, out_channels, kernel_size=4, strides=2, padding=1, BN=True, RL=True, dr=False):
+        def make_dconv_layer(in_channels, out_channels, kernel_size=4, strides=2, padding=1, bn=False, RL=True, dr=False):
             layers = [nn.ConvTranspose2d(in_channels, out_channels,
                       kernel_size=kernel_size, stride=strides, padding=padding, bias=True),]
-            if BN:
+            if bn:
                 layers.append(nn.BatchNorm2d(out_channels, affine=True))   # nn.BatchNorm2d , nn.InstanceNorm2d
             if RL:
-                layers.append(nn.ReLU(inplace=True))  #nn.ReLU(inplace=True)
+                layers.append(nn.LeakyReLU(0.2,inplace=True))  #nn.ReLU(inplace=True)
             if dr:
                 layers.append(nn.Dropout(0.25))
             return layers
@@ -77,16 +78,16 @@ class Generator(nn.Module):    # 'channels': [1024, 512, 256, 128, 64, 32]
             *make_dconv_layer(channels[2], channels[3], kernel_size=4, strides=2, padding=1),
             *make_dconv_layer(channels[3], channels[4], kernel_size=4, strides=2, padding=1),
             *make_dconv_layer(channels[4], channels[5], kernel_size=4, strides=2, padding=1),
-            *make_dconv_layer(channels[5], output_channel, kernel_size=1, strides=1, padding=0, RL=False, BN=False),
+
         ]
-        G_model += [nn.Tanh()]
+        G_model += [nn.ConvTranspose2d(channels[5], output_channel, 1, 1, 0, bias=True), nn.BatchNorm2d(output_channel, affine=True), nn.Tanh()]
 
         self.model = nn.Sequential(*G_model)
 
     def forward(self, x):
         # x = torch.cat((self.label_emb(emotion_labels),x),-1)     # 词向量随机生成代替one-hot编码
         # x = self.fc(x)
-        # x = x.unsqueeze(2).unsqueeze(3)
+        x = x.unsqueeze(2).unsqueeze(3)
         x_ = self.model(x)
         return x_
 
@@ -100,11 +101,11 @@ class FaceEmbedNet(nn.Module):
             layers = [
                 nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=True),
                 ]
-            if bn:
-                layers.append(nn.BatchNorm2d(out_channels))
             if RL:
                 layers.append(nn.LeakyReLU(0.2, inplace=True))
                 # layers.append(nn.Dropout(0.2))  # DP,
+            if bn:
+                layers.append(nn.BatchNorm2d(out_channels))
             if pool:
                 layers.append(nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=False))
             return layers
@@ -117,7 +118,7 @@ class FaceEmbedNet(nn.Module):
             *make_conv_layer(channels[2], channels[3],  4, 2, 1),
             *make_conv_layer(channels[3], channels[4],  4, 2, 1),
             *make_conv_layer(channels[4], channels[5], 4, 2, 1),
-            nn.Conv2d(channels[5], channels[6], 4, 1, 0, bias=True),
+            nn.Conv2d(channels[5], channels[6], 4, 2, 0, bias=True),
         )
         # self.fc = nn.Sequential(
         #     # nn.Linear(channels[6], 1024),
@@ -135,8 +136,8 @@ class FaceEmbedNet(nn.Module):
 class Classifier(nn.Module):
     def __init__(self, input_channel, channels, output_channel):
         super(Classifier, self).__init__()
-
-        self.model = nn.Linear(input_channel, output_channel, bias=False)    # 线性层
+        # 线性层
+        self.model = nn.Linear(input_channel, output_channel, bias=False)
 
     def forward(self, x):
         x = x.view(x.size()[0], -1)
